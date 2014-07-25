@@ -21,7 +21,7 @@
 require "sensu-plugin/check/cli"
 require "aws-sdk"
 
-class CheckELBLatency < Sensu::Plugin::Check::CLI
+class CheckELBUnhealthyInstances < Sensu::Plugin::Check::CLI
   option :access_key_id,
     short:       "-k N",
     long:        "--access-key-id ID",
