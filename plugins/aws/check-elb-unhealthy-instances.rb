@@ -74,6 +74,8 @@ class CheckELBUnhealthyInstances < Sensu::Plugin::Check::CLI
   end
 
   def check_unhealthy_instances(load_balancer)
+    @unhealthy_count = nil
+
     @severities.keys.each do |severity|
       threshold = config[:"#{severity}_over"]
       next unless threshold
