@@ -78,14 +78,14 @@ class CheckELBUnhealthyInstances < Sensu::Plugin::Check::CLI
       threshold = config[:"#{severity}_over"]
       next unless threshold
 
-      unhealthy_count = load_balancer.instances.health.inject 0 do |sum, health|
+      @unhealthy_count ||= load_balancer.instances.health.inject 0 do |sum, health|
         sum += 1 unless health[:state] == "InService"
         sum
       end
 
-      next if unhealthy_count < threshold
+      next if @unhealthy_count < threshold
       flag_alert severity,
-        "; #{elbs.size == 1 ? nil : "#{load_balancer.inspect}: "}#{unhealthy_count} unhealthy instances. (expected lower than #{threshold})"
+        "; #{elbs.size == 1 ? nil : "#{load_balancer.inspect}: "}#{@unhealthy_count} unhealthy instances. (expected lower than #{threshold})"
       break
     end
   end
