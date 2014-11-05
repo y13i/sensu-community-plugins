@@ -52,14 +52,14 @@ class CheckDynamoDB < Sensu::Plugin::Check::CLI
   option :period,
     short:       "-p N",
     long:        "--period SECONDS",
-    default:     60,
+    default:     300,
     proc:        proc {|a| a.to_i},
     description: "CloudWatch metric statistics period"
 
   option :statistics,
     short:       "-S N",
     long:        "--statistics NAME",
-    default:     :average,
+    default:     :sum,
     proc:        proc {|a| a.downcase.intern},
     description: "CloudWatch statistics method"
 
@@ -123,31 +123,34 @@ class CheckDynamoDB < Sensu::Plugin::Check::CLI
 
   def check_capacity(table)
     config[:capacity_for].each do |r_or_w|
-      metric_name   = "Consumed#{r_or_w.to_s.capitalize}CapacityUnits"
-      metric        = cloud_watch_metric metric_name, table.name
-      metric_value  = begin
-                        latest_value(metric)
-                      rescue
-                        0
-                      end
-      percentage    = metric_value / table.send("#{r_or_w}_capacity_units").to_f * 100
+      metric_name = "Consumed#{r_or_w.to_s.capitalize}CapacityUnits"
+      metric      = cloud_watch_metric metric_name, table.name
+
+      metric_value = begin
+        latest_value(metric)
+      rescue
+        0
+      end
+
+      percentage = metric_value / table.send("#{r_or_w}_capacity_units").to_f / config[:period] * 100
 
       @severities.keys.each do |severity|
         threshold = config[:"#{severity}_over"]
         next unless threshold
         next if percentage < threshold
-        flag_alert severity, "; On table #{table.name} consumed #{r_or_w} capacity is #{sprintf "%.2f", percentage}% (expected_lower_than #{threshold})"
+        flag_alert severity, "; On table #{table.name} consumed #{r_or_w} capacity is #{sprintf "%.2f", percentage}% (expected lower than #{threshold})"
         break
       end
     end
   end
 
   def run
-    @message    = "#{tables.size} tables total"
+    @message = "#{tables.size} tables total"
+
     @severities = {
-                    critical: false,
-                    warning: false,
-                  }
+      critical: false,
+      warning: false,
+    }
 
     tables.each {|table| check_capacity table}
 
